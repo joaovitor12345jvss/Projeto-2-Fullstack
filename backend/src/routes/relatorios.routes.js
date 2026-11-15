@@ -23,6 +23,59 @@ function mesSeguinte(ano, mes, incremento = 1) {
   return { ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1 };
 }
 
+// RF7 — Relatório financeiro por categoria (totais, quantidade e % do total do tipo).
+router.get('/categorias', async (req, res, next) => {
+  const { inicio, fim, tipo } = req.query;
+  if ((inicio && !dataValida(inicio)) || (fim && !dataValida(fim))) {
+    return res.status(400).json({ erro: 'As datas devem estar no formato AAAA-MM-DD.' });
+  }
+  if (inicio && fim && inicio > fim) return res.status(400).json({ erro: 'A data inicial não pode ser posterior à final.' });
+  if (tipo && !['entrada', 'saida'].includes(tipo)) return res.status(400).json({ erro: 'Tipo deve ser entrada ou saida.' });
+
+  try {
+    const values = [req.usuarioId];
+    const joinCond = ['l.categoria_id = c.id', 'l.usuario_id = c.usuario_id'];
+    if (inicio) { values.push(inicio); joinCond.push(`l.data >= $${values.length}`); }
+    if (fim) { values.push(fim); joinCond.push(`l.data <= $${values.length}`); }
+    let filtroTipo = '';
+    if (tipo) { values.push(tipo); filtroTipo = ` AND c.tipo = $${values.length}`; }
+
+    const result = await pool.query(
+      `SELECT c.id AS categoria_id, c.nome, c.tipo,
+              COALESCE(SUM(l.valor), 0)::numeric(14,2) AS total,
+              COUNT(l.id)::int AS quantidade_lancamentos
+       FROM categorias c
+       LEFT JOIN lancamentos l ON ${joinCond.join(' AND ')}
+       WHERE c.usuario_id = $1${filtroTipo}
+       GROUP BY c.id, c.nome, c.tipo
+       ORDER BY c.tipo, total DESC, c.nome`,
+      values
+    );
+
+    const somaPorTipo = { entrada: 0, saida: 0 };
+    for (const r of result.rows) somaPorTipo[r.tipo] += Number(r.total);
+
+    const dados = result.rows.map(r => ({
+      categoria_id: r.categoria_id,
+      nome: r.nome,
+      tipo: r.tipo,
+      total: Number(r.total),
+      quantidade_lancamentos: r.quantidade_lancamentos,
+      percentual: somaPorTipo[r.tipo] > 0
+        ? Number(((Number(r.total) / somaPorTipo[r.tipo]) * 100).toFixed(2))
+        : 0
+    }));
+
+    return res.json({
+      filtros: { inicio: inicio || null, fim: fim || null, tipo: tipo || null },
+      total_entradas: Number(somaPorTipo.entrada.toFixed(2)),
+      total_saidas: Number(somaPorTipo.saida.toFixed(2)),
+      saldo: Number((somaPorTipo.entrada - somaPorTipo.saida).toFixed(2)),
+      dados
+    });
+  } catch (erro) { return next(erro); }
+});
+
 // RF8 — Totais de receitas e despesas agrupados por fonte/destino.
 router.get('/fontes-destinos', async (req, res, next) => {
   const { inicio, fim, tipo } = req.query;
