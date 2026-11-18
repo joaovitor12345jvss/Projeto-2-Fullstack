@@ -66,11 +66,14 @@ Filtros opcionais: `inicio`, `fim` e `tipo` (`entrada` ou `saida`). Retorna, por
 
 `GET /api/relatorios/faturas?mes=2026-11&meses=6`
 
-- `mes` é opcional; sem ele, começa no mês atual.
+- `mes` (AAAA-MM) é opcional: é o primeiro **ciclo** (mês do fechamento) exibido; sem ele, começa no mês atual.
 - `meses` é opcional, padrão 6, máximo 12.
-- Compras após o dia de fechamento são atribuídas ao ciclo seguinte.
-- O vencimento é calculado usando o dia de vencimento cadastrado no cartão.
-- Compras parceladas já registradas como parcelas mensais são consideradas em seus respectivos ciclos.
+- Regra de fechamento: compra feita **antes** do dia de fechamento entra na fatura que fecha no mesmo mês; no dia do fechamento ou depois, entra na do mês seguinte. Dias inexistentes (ex.: fechamento dia 31 em fevereiro) são ajustados para o último dia do mês.
+- Vencimento: se `dia_vencimento` > `dia_fechamento`, é no mês do fechamento; caso contrário, no mês seguinte.
+- Parcelas: cada parcela é gravada com a data da compra + (k − 1) meses, então cai naturalmente em faturas consecutivas.
+- Cada fatura traz: `ciclo` (AAAA-MM do fechamento), `mes_referencia` (AAAA-MM do **vencimento**, como na Tabela 10.3 do enunciado), `status` (`aberta`, `fechada` ou `futura`), `fechamento`, `vencimento`, `total`, `limite`, `limite_utilizado`, `limite_disponivel` e a lista `lancamentos` (com `parcela` no formato `3/10`).
+- `limite_utilizado` = soma das compras e parcelas do cartão cuja fatura **ainda não venceu** (compromete o limite mesmo as parcelas de faturas futuras).
+- As regras de datas ficam em `src/models/Fatura.js` (funções puras, sem acesso ao banco).
 
 A previsão usa somente lançamentos existentes. Não prevê compras futuras ainda não cadastradas, juros, multas ou encargos.
 

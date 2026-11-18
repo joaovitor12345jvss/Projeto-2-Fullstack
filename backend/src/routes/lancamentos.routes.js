@@ -105,7 +105,14 @@ router.post('/', async (req, res, next) => {
 
 // RF6 — Listar com filtros independentes e paginação.
 router.get('/', async (req, res, next) => {
-  const { inicio, fim, tipo, categoriaId, fonteDestinoId, pagina = '1', porPagina = '20' } = req.query;
+  let { inicio, fim, tipo, categoriaId, fonteDestinoId, pagina = '1', porPagina = '20' } = req.query;
+  // Sem período informado, a listagem considera automaticamente o mês corrente.
+  if (!inicio && !fim) {
+    const hoje = new Date();
+    inicio = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+    fim = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`;
+  }
   const page = inteiroPositivo(pagina);
   const pageSize = inteiroPositivo(porPagina);
   if (!page || !pageSize || pageSize > MAX_POR_PAGINA) {
@@ -133,8 +140,19 @@ router.get('/', async (req, res, next) => {
     if (fonteId) add('l.fonte_destino_id = ?', fonteId);
 
     const where = conditions.join(' AND ');
-    const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM lancamentos l WHERE ${where}`, values);
+    const [countResult, totaisResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int AS total FROM lancamentos l WHERE ${where}`, values),
+      pool.query(
+        `SELECT
+          COALESCE(SUM(valor) FILTER (WHERE tipo='entrada'),0)::numeric(14,2) AS total_entradas,
+          COALESCE(SUM(valor) FILTER (WHERE tipo='saida'),0)::numeric(14,2) AS total_saidas
+         FROM lancamentos l WHERE ${where}`,
+        values
+      )
+    ]);
     const total = countResult.rows[0].total;
+    const totalEntradas = Number(totaisResult.rows[0].total_entradas);
+    const totalSaidas = Number(totaisResult.rows[0].total_saidas);
     const offset = (page - 1) * pageSize;
     const dataValues = [...values, pageSize, offset];
     const result = await pool.query(
@@ -149,7 +167,9 @@ router.get('/', async (req, res, next) => {
     );
     return res.json({
       dados: result.rows,
-      paginacao: { pagina: page, porPagina: pageSize, total, totalPaginas: Math.ceil(total / pageSize) }
+      paginacao: { pagina: page, porPagina: pageSize, total, totalPaginas: Math.ceil(total / pageSize) },
+      totais: { total_entradas: totalEntradas, total_saidas: totalSaidas, saldo: Number((totalEntradas-totalSaidas).toFixed(2)) },
+      filtros: { inicio: inicio || null, fim: fim || null, tipo: tipo || null, categoriaId: catId, fonteDestinoId: fonteId }
     });
   } catch (erro) {
     return next(erro);
@@ -208,7 +228,7 @@ router.put('/:id', async (req, res, next) => {
   finally { client.release(); }
 });
 
-// RF6 — Excluir um lançamento. Use ?grupo=true para excluir todas as parcelas do mesmo grupo.
+// RF6 — Excluir um lançamento. Use ?todasParcelas=true para excluir todas as parcelas do mesmo grupo.
 router.delete('/:id', async (req, res, next) => {
   const id = inteiroPositivo(req.params.id);
   if (!id) return res.status(400).json({ erro: 'ID inválido.' });
@@ -219,7 +239,7 @@ router.delete('/:id', async (req, res, next) => {
     );
     if (!encontrado.rowCount) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
     const grupo = encontrado.rows[0].grupo_parcelamento;
-    const result = req.query.grupo === 'true' && grupo
+    const result = (req.query.todasParcelas === 'true' || req.query.grupo === 'true') && grupo
       ? await pool.query('DELETE FROM lancamentos WHERE grupo_parcelamento=$1 AND usuario_id=$2 RETURNING id', [grupo, req.usuarioId])
       : await pool.query('DELETE FROM lancamentos WHERE id=$1 AND usuario_id=$2 RETURNING id', [id, req.usuarioId]);
     return res.json({ mensagem: 'Lançamento(s) excluído(s) com sucesso.', excluidos: result.rowCount });
