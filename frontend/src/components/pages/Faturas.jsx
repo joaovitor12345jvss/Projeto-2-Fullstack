@@ -1,114 +1,27 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-
-const money = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const dataBR = (iso) => String(iso || '').slice(0, 10).split('-').reverse().join('/');
-const mesBR = (ref) => { const [a, m] = String(ref).split('-'); return `${m}/${a}`; };
-const mesAtualLocal = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const campo = { padding: 8, border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222' };
-const STATUS = {
-  aberta: { texto: 'Aberta', cor: '#1d4ed8', fundo: '#dbeafe' },
-  fechada: { texto: 'Fechada', cor: '#92400e', fundo: '#fef3c7' },
-  futura: { texto: 'Prevista', cor: '#374151', fundo: '#e5e7eb' }
-};
-
-export default function Faturas() {
-  const [mes, setMes] = useState(mesAtualLocal());
-  const [meses, setMeses] = useState(6);
-  const [faturas, setFaturas] = useState([]);
-  const [erro, setErro] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function carregar() {
-    setLoading(true);
-    setErro('');
-    try {
-      const { data } = await api.get('/relatorios/faturas', { params: { mes, meses } });
-      setFaturas(data.faturas || []);
-    } catch (e) {
-      setErro(e.response?.data?.erro || 'Erro ao consultar faturas.');
-      setFaturas([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { carregar(); }, []);
-
-  return (
-    <div style={{ color: '#222', textAlign: 'left' }}>
-      <h1>Faturas de cartões</h1>
-      <p>
-        Previsão calculada a partir das compras e parcelas já registradas. Cada fatura é identificada
-        pelo mês do vencimento. Não inclui juros, encargos nem compras ainda não cadastradas.
-      </p>
-
-      <div style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap', margin: '18px 0' }}>
-        <label>Primeiro mês de fechamento<br />
-          <input style={campo} type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
-        </label>
-        <label>Quantidade de meses<br />
-          <select style={campo} value={meses} onChange={(e) => setMeses(Number(e.target.value))}>
-            {[3, 6, 9, 12].map((n) => <option key={n} value={n}>{n} meses</option>)}
-          </select>
-        </label>
-        <button onClick={carregar} disabled={loading || !mes}>{loading ? 'Consultando...' : 'Consultar faturas'}</button>
-      </div>
-
-      {erro && <p role="alert" style={{ color: '#b91c1c' }}>{erro}</p>}
-
-      {loading ? <p>Carregando...</p> : faturas.length === 0 ? (
-        <p>Nenhum cartão de crédito cadastrado ou nenhuma fatura encontrada para o período.</p>
-      ) : faturas.map((f) => {
-        const st = STATUS[f.status] || STATUS.futura;
-        const usoPct = f.limite > 0 ? Math.min(100, (f.limite_utilizado / f.limite) * 100) : 0;
-        return (
-          <section key={`${f.cartao_id}-${f.ciclo}`} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 8px' }}>
-              {f.cartao} — fatura {mesBR(f.mes_referencia)}
-              <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 12, background: st.fundo, color: st.cor }}>{st.texto}</span>
-            </h2>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              <p>Fechamento: <strong>{dataBR(f.fechamento)}</strong></p>
-              <p>Vencimento: <strong>{dataBR(f.vencimento)}</strong></p>
-              <p>Valor da fatura: <strong>{money(f.total)}</strong></p>
-            </div>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              <p>Limite do cartão: <strong>{money(f.limite)}</strong></p>
-              <p>Limite utilizado: <strong>{money(f.limite_utilizado)}</strong></p>
-              <p>Limite disponível: <strong>{money(f.limite_disponivel)}</strong></p>
-            </div>
-            <div title={`${usoPct.toFixed(0)}% do limite utilizado`} style={{ height: 8, background: '#eee', borderRadius: 6, overflow: 'hidden', margin: '0 0 12px' }}>
-              <div style={{ width: `${usoPct}%`, height: '100%', background: usoPct > 80 ? '#dc2626' : '#2563eb' }} />
-            </div>
-
-            {f.lancamentos?.length ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>{['Compra', 'Categoria', 'Data', 'Parcela', 'Valor'].map((t) => (
-                      <th key={t} style={{ textAlign: 'left', padding: 8, borderBottom: '2px solid #ddd' }}>{t}</th>
-                    ))}</tr>
-                  </thead>
-                  <tbody>
-                    {f.lancamentos.map((l) => (
-                      <tr key={l.id}>
-                        {[l.descricao, l.categoria, dataBR(l.data), l.parcela, money(l.valor)].map((v, j) => (
-                          <td key={j} style={{ padding: 8, borderBottom: '1px solid #eee' }}>{v}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <p>Sem compras previstas nesta fatura.</p>}
-          </section>
-        );
-      })}
-    </div>
-  );
+const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const dataBR = iso => String(iso || '').slice(0, 10).split('-').reverse().join('/');
+const mesBR = ref => { const [a,m] = String(ref).split('-'); return `${m}/${a}`; };
+const mesAtualLocal = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
+const STATUS = { aberta:{texto:'Aberta',classe:'aberta'}, fechada:{texto:'Fechada',classe:'fechada'}, futura:{texto:'Prevista',classe:'futura'} };
+export default function Faturas(){
+ const [mes,setMes]=useState(mesAtualLocal()),[meses,setMeses]=useState(6),[faturas,setFaturas]=useState([]),[erro,setErro]=useState(''),[loading,setLoading]=useState(false);
+ async function carregar(){setLoading(true);setErro('');try{const {data}=await api.get('/relatorios/faturas',{params:{mes,meses}});setFaturas(data.faturas||[]);}catch(e){setErro(e.response?.data?.erro||'Erro ao consultar faturas.');setFaturas([]);}finally{setLoading(false);}}
+ useEffect(()=>{carregar();},[]);
+ return <div className="page">
+  <div className="page-header"><h1>Faturas de cartões</h1><p className="page-subtitle fatura-description">Acompanhe os ciclos de fechamento, vencimentos e limite utilizado dos seus cartões. A previsão considera as compras e parcelas registradas no sistema.</p></div>
+  <div className="card"><div className="form-row"><label className="field">Mês inicial<input type="month" value={mes} onChange={e=>setMes(e.target.value)}/></label><label className="field">Período<select value={meses} onChange={e=>setMeses(Number(e.target.value))}>{[3,6,9,12].map(n=><option key={n} value={n}>{n} meses</option>)}</select></label><button className="btn" onClick={carregar} disabled={loading||!mes}>{loading?'Consultando...':'Consultar faturas'}</button></div></div>
+  {erro&&<div className="alert alert-error" role="alert">{erro}</div>}
+  {loading?<div className="card empty">Consultando faturas...</div>:faturas.length===0?<div className="card empty">Nenhum cartão de crédito cadastrado ou nenhuma fatura encontrada para o período.</div>:faturas.map(f=>{
+   const st=STATUS[f.status]||STATUS.futura;const usoPct=f.limite>0?Math.min(100,(f.limite_utilizado/f.limite)*100):0;
+   return <section className="card fatura-card" key={`${f.cartao_id}-${f.ciclo}`}>
+    <div className="fatura-head"><h2>{f.cartao} <span className="muted-separator">/</span> {mesBR(f.mes_referencia)}</h2><span className={`fatura-status ${st.classe}`}>{st.texto}</span></div>
+    <div className="fatura-meta"><div className="fatura-meta-item"><span>VALOR DA FATURA</span><strong>{money(f.total)}</strong></div><div className="fatura-meta-item"><span>FECHAMENTO</span><strong>{dataBR(f.fechamento)}</strong></div><div className="fatura-meta-item"><span>VENCIMENTO</span><strong>{dataBR(f.vencimento)}</strong></div></div>
+    <div className="fatura-limit"><span>Limite utilizado: {money(f.limite_utilizado)}</span><strong>Disponível: {money(f.limite_disponivel)}</strong></div><div className="fatura-track" title={`${usoPct.toFixed(0)}% do limite utilizado`}><div className={`fatura-fill ${usoPct>80?'high':''}`} style={{width:`${usoPct}%`}}/></div>
+    <div className="section-heading"><div><h2>Compras desta fatura</h2><p className="page-subtitle">Limite total: {money(f.limite)}</p></div></div>
+    {f.lancamentos?.length?<div className="table-wrap"><table><thead><tr>{['Compra','Categoria','Data','Parcela','Valor'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{f.lancamentos.map(l=><tr key={l.id}><td><strong className="table-primary">{l.descricao}</strong></td><td>{l.categoria}</td><td>{dataBR(l.data)}</td><td>{l.parcela}</td><td className="num">{money(l.valor)}</td></tr>)}</tbody></table></div>:<p className="empty">Sem compras previstas nesta fatura.</p>}
+   </section>;
+  })}
+ </div>;
 }

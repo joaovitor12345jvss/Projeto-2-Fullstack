@@ -60,7 +60,7 @@ export default function Cadastro() {
   return (
     <div className="auth-page">
       <div className="auth-side">
-        <h1>💰 Finanças</h1>
+        <h1>Finwise</h1>
         <p>Crie sua conta e comece a organizar o seu dinheiro hoje mesmo.</p>
         <ul>
           <li>✓ Categorias e fontes já criadas para você</li>

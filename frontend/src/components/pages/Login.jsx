@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="auth-page">
       <div className="auth-side">
-        <h1>💰 Finanças</h1>
+        <h1>Finwise</h1>
         <p>Controle suas entradas, saídas e faturas de cartão em um só lugar.</p>
         <ul>
           <li>✓ Lançamentos com parcelamento</li>

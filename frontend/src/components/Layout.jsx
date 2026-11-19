@@ -1,64 +1,61 @@
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const MENU = [
-  { to: '/dashboard', icone: '📊', texto: 'Dashboard' },
-  { to: '/lancamentos', icone: '🧾', texto: 'Lançamentos' },
-  { to: '/categorias', icone: '🏷️', texto: 'Categorias' },
-  { to: '/fontes-destinos', icone: '🏦', texto: 'Fontes e Destinos' },
-  { to: '/relatorios', icone: '📈', texto: 'Relatórios' },
-  { to: '/faturas', icone: '💳', texto: 'Faturas' }
+  { to: '/dashboard', texto: 'Visão geral', grupo: 'PRINCIPAL', codigo: '01' },
+  { to: '/lancamentos', texto: 'Lançamentos', codigo: '02' },
+  { to: '/categorias', texto: 'Categorias', codigo: '03' },
+  { to: '/fontes-destinos', texto: 'Contas e cartões', grupo: 'GESTÃO', codigo: '04' },
+  { to: '/faturas', texto: 'Faturas', codigo: '05' },
+  { to: '/relatorios', texto: 'Relatórios', codigo: '06' }
 ];
+const TITULOS = Object.fromEntries(MENU.map(item => [item.to, item.texto]));
 
 export default function Layout() {
   const { logado, carregando, logout, usuario } = useAuth();
+  const location = useLocation();
+  if (carregando) return <div className="app-loading">Carregando aplicação...</div>;
+  if (!logado) return <Navigate to="/login" replace />;
 
-  // Impede que a tela pisque no /login antes do useEffect carregar o localStorage
-  if (carregando) {
-    return <div style={{ padding: '2rem' }}>Carregando aplicação...</div>;
-  }
-
-  // Proteção de rota: redireciona se não estiver logado
-  if (!logado) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const inicial = usuario?.nome?.trim()?.[0]?.toUpperCase() || '?';
+  const nome = usuario?.nome?.trim() || 'Usuário';
+  const inicial = nome[0]?.toUpperCase() || 'U';
+  const primeiroNome = nome.split(' ')[0];
 
   return (
-    <div className="layout">
+    <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-logo">💰</span>
-          <span>Finanças</span>
+          <span className="brand-mark">F</span>
+          <span className="brand-name">finwise<span>.</span></span>
         </div>
-
+        <div className="sidebar-caption">ESPAÇO DE TRABALHO</div>
         <nav className="nav">
-          {MENU.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-            >
-              <span>{item.icone}</span>
-              <span>{item.texto}</span>
-            </NavLink>
+          {MENU.map((item, index) => (
+            <div key={item.to}>
+              {item.grupo && <div className="nav-group-label">{item.grupo}</div>}
+              <NavLink to={item.to} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+                <span className="nav-index">{item.codigo}</span>
+                <span>{item.texto}</span>
+                {location.pathname === item.to && <span className="nav-current" />}
+              </NavLink>
+            </div>
           ))}
         </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-chip">
+        <div className="sidebar-bottom">
+          <div className="sidebar-note"><span className="status-dot" /> Seus dados estão sincronizados</div>
+          <div className="profile-row">
             <span className="user-avatar">{inicial}</span>
-            <span className="user-name">{usuario?.nome}</span>
+            <span className="profile-copy"><strong>{primeiroNome}</strong><small>Conta pessoal</small></span>
+            <button className="btn-logout" onClick={logout} aria-label="Sair da conta" title="Sair">Sair</button>
           </div>
-          <button className="btn-logout" onClick={logout}>Sair</button>
         </div>
       </aside>
-
-      <main className="content">
-        <div className="content-inner">
-          <Outlet />
-        </div>
+      <main className="main-area">
+        <header className="topbar">
+          <div><span className="topbar-eyebrow">FINWISE / FINANÇAS PESSOAIS</span><span className="topbar-title">{TITULOS[location.pathname] || 'Painel'}</span></div>
+          <div className="topbar-right"><span className="topbar-date">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span><span className="topbar-avatar">{inicial}</span></div>
+        </header>
+        <div className="content"><div className="content-inner"><Outlet /></div></div>
       </main>
     </div>
   );
