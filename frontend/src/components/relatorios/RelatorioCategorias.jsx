@@ -1,24 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../services/api';
 
-const estilos = {
-  secao: { textAlign: 'left', color: '#222', marginBottom: '2rem' },
-  subtitulo: { color: '#222', fontSize: '1.4rem', margin: '0 0 1rem' },
-  caixa: { border: '1px solid #ddd', borderRadius: 8, padding: '1rem', marginBottom: '1rem', background: '#fafafa' },
-  linha: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' },
-  campo: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.9rem' },
-  input: { padding: '8px', border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222', fontSize: '1rem' },
-  botao: { padding: '8px 16px', border: 'none', borderRadius: 4, background: '#2563eb', color: '#fff', cursor: 'pointer', fontSize: '1rem' },
-  resumo: { display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' },
-  card: { border: '1px solid #ddd', borderRadius: 8, padding: '0.75rem 1rem', minWidth: 160, background: '#fff' },
-  tabela: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd', color: '#222' },
-  thNum: { textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd', color: '#222' },
-  td: { padding: '8px', borderBottom: '1px solid #eee', color: '#222' },
-  tdNum: { padding: '8px', borderBottom: '1px solid #eee', color: '#222', textAlign: 'right' },
-  erro: { background: '#fdecea', color: '#b71c1c', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem' }
-};
-
 function moeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -50,77 +32,92 @@ export default function RelatorioCategorias() {
   }
 
   return (
-    <section style={estilos.secao}>
-      <h2 style={estilos.subtitulo}>Relatório por categoria</h2>
+    <section className="section">
+      <h2>Relatório por categoria</h2>
 
-      <form onSubmit={gerar} style={estilos.caixa}>
-        <div style={estilos.linha}>
-          <label style={estilos.campo}>
+      <form onSubmit={gerar} className="card">
+        <div className="form-row">
+          <label className="field">
             Data inicial
-            <input
-              style={estilos.input} type="date" value={filtros.inicio}
-              onChange={(e) => setFiltros({ ...filtros, inicio: e.target.value })}
-            />
+            <input type="date" value={filtros.inicio} onChange={(e) => setFiltros({ ...filtros, inicio: e.target.value })} />
           </label>
-          <label style={estilos.campo}>
+          <label className="field">
             Data final
-            <input
-              style={estilos.input} type="date" value={filtros.fim}
-              onChange={(e) => setFiltros({ ...filtros, fim: e.target.value })}
-            />
+            <input type="date" value={filtros.fim} onChange={(e) => setFiltros({ ...filtros, fim: e.target.value })} />
           </label>
-          <label style={estilos.campo}>
+          <label className="field">
             Tipo
-            <select
-              style={estilos.input} value={filtros.tipo}
-              onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
-            >
+            <select value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
               <option value="">Entradas e saídas</option>
               <option value="entrada">Somente entradas</option>
               <option value="saida">Somente saídas</option>
             </select>
           </label>
-          <button type="submit" style={estilos.botao} disabled={carregando}>
+          <button type="submit" className="btn" disabled={carregando}>
             {carregando ? 'Gerando...' : 'Gerar relatório'}
           </button>
         </div>
       </form>
 
-      {erro && <div style={estilos.erro}>{erro}</div>}
+      {erro && <div className="alert alert-error">{erro}</div>}
 
       {relatorio && (
         <>
-          <div style={estilos.resumo}>
-            <div style={estilos.card}>Entradas<br /><strong style={{ color: '#1b5e20' }}>{moeda(relatorio.total_entradas)}</strong></div>
-            <div style={estilos.card}>Saídas<br /><strong style={{ color: '#b71c1c' }}>{moeda(relatorio.total_saidas)}</strong></div>
-            <div style={estilos.card}>Saldo<br /><strong>{moeda(relatorio.saldo)}</strong></div>
+          <div className="stats">
+            <div className="stat stat-entrada">
+              <div className="stat-label">Entradas</div>
+              <div className="stat-value">{moeda(relatorio.total_entradas)}</div>
+            </div>
+            <div className="stat stat-saida">
+              <div className="stat-label">Saídas</div>
+              <div className="stat-value">{moeda(relatorio.total_saidas)}</div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">Saldo</div>
+              <div className="stat-value" style={{ color: relatorio.saldo < 0 ? '#b91c1c' : undefined }}>
+                {moeda(relatorio.saldo)}
+              </div>
+            </div>
           </div>
 
           {relatorio.dados.length === 0 ? (
-            <p>Nenhuma categoria encontrada.</p>
+            <div className="card empty">Nenhuma categoria encontrada.</div>
           ) : (
-            <table style={estilos.tabela}>
-              <thead>
-                <tr>
-                  <th style={estilos.th}>Categoria</th>
-                  <th style={estilos.th}>Tipo</th>
-                  <th style={estilos.thNum}>Lançamentos</th>
-                  <th style={estilos.thNum}>Total</th>
-                  <th style={estilos.thNum}>% do tipo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relatorio.dados.map((linha) => (
-                  <tr key={linha.categoria_id}>
-                    <td style={estilos.td}>{linha.nome}</td>
-                    <td style={estilos.td}>{linha.tipo === 'entrada' ? 'Entrada' : 'Saída'}</td>
-                    <td style={estilos.tdNum}>{linha.quantidade_lancamentos}</td>
-                    <td style={estilos.tdNum}>{moeda(linha.total)}</td>
-                    <td style={estilos.tdNum}>{linha.percentual.toFixed(2)}%</td>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th className="num">Lançamentos</th>
+                    <th className="num">Total</th>
+                    <th className="num">% do tipo</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {relatorio.dados.map((linha) => (
+                    <tr key={linha.categoria_id}>
+                      <td>{linha.nome}</td>
+                      <td>
+                        <span className={`badge ${linha.tipo === 'entrada' ? 'badge-entrada' : 'badge-saida'}`}>
+                          {linha.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                        </span>
+                      </td>
+                      <td className="num">{linha.quantidade_lancamentos}</td>
+                      <td className="num">{moeda(linha.total)}</td>
+                      <td>
+                        <div className="pct">
+                          <div className="bar-track">
+                            <div className={`bar-fill ${linha.tipo}`} style={{ width: `${linha.percentual}%` }} />
+                          </div>
+                          <span className="pct-text">{linha.percentual.toFixed(2)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

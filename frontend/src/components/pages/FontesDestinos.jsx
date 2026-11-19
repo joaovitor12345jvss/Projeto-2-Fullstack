@@ -2,26 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 
 const FORM_VAZIO = { nome: '', tipo: 'conta', dia_fechamento: '', dia_vencimento: '', limite: '' };
-
 const NOMES_TIPO = { renda: 'Renda', conta: 'Conta', cartao_credito: 'Cartão de crédito' };
-
-const estilos = {
-  pagina: { textAlign: 'left', color: '#222' },
-  titulo: { color: '#222', fontSize: '2rem', margin: '0 0 1.5rem' },
-  caixa: { border: '1px solid #ddd', borderRadius: 8, padding: '1rem', marginBottom: '1.5rem', background: '#fafafa' },
-  linha: { display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' },
-  campo: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.9rem' },
-  input: { padding: '8px', border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222', fontSize: '1rem' },
-  botao: { padding: '8px 16px', border: 'none', borderRadius: 4, background: '#2563eb', color: '#fff', cursor: 'pointer', fontSize: '1rem' },
-  botaoSec: { padding: '8px 16px', border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222', cursor: 'pointer', fontSize: '1rem' },
-  botaoPerigo: { padding: '4px 10px', border: 'none', borderRadius: 4, background: '#d32f2f', color: '#fff', cursor: 'pointer' },
-  botaoPeq: { padding: '4px 10px', border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222', cursor: 'pointer', marginRight: 6 },
-  tabela: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd', color: '#222' },
-  td: { padding: '8px', borderBottom: '1px solid #eee', color: '#222' },
-  erro: { background: '#fdecea', color: '#b71c1c', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem' },
-  ok: { background: '#e8f5e9', color: '#1b5e20', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem' }
-};
+const CLASSE_TIPO = { renda: 'badge-entrada', conta: 'badge-neutral', cartao_credito: 'badge-cartao' };
 
 function moeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -115,32 +97,31 @@ export default function FontesDestinos() {
   }
 
   return (
-    <div style={estilos.pagina}>
-      <h1 style={estilos.titulo}>Fontes e Destinos</h1>
+    <div className="page">
+      <div className="page-header">
+        <h1>Fontes e Destinos</h1>
+        <p className="page-subtitle">Cadastre de onde o dinheiro vem e para onde ele vai: rendas, contas e cartões.</p>
+      </div>
 
-      {erro && <div style={estilos.erro}>{erro}</div>}
-      {sucesso && <div style={estilos.ok}>{sucesso}</div>}
+      {erro && <div className="alert alert-error">{erro}</div>}
+      {sucesso && <div className="alert alert-success">{sucesso}</div>}
 
-      <form onSubmit={salvar} style={estilos.caixa}>
-        <strong>{editandoId ? 'Editar fonte/destino' : 'Nova fonte/destino'}</strong>
-        <div style={{ ...estilos.linha, marginTop: '0.75rem' }}>
-          <label style={estilos.campo}>
+      <form onSubmit={salvar} className="card">
+        <p className="card-title">{editandoId ? 'Editar fonte/destino' : 'Nova fonte/destino'}</p>
+        <div className="form-row">
+          <label className="field" style={{ flex: '1 1 220px' }}>
             Nome
             <input
-              style={estilos.input}
               value={form.nome}
               maxLength={60}
               required
+              placeholder="Ex.: Nubank"
               onChange={(e) => setForm({ ...form, nome: e.target.value })}
             />
           </label>
-          <label style={estilos.campo}>
+          <label className="field">
             Tipo
-            <select
-              style={estilos.input}
-              value={form.tipo}
-              onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-            >
+            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
               <option value="conta">Conta</option>
               <option value="renda">Renda</option>
               <option value="cartao_credito">Cartão de crédito</option>
@@ -149,28 +130,25 @@ export default function FontesDestinos() {
 
           {ehCartao && (
             <>
-              <label style={estilos.campo}>
-                Dia de fechamento
+              <label className="field field-sm">
+                Fechamento (dia)
                 <input
-                  style={{ ...estilos.input, width: 120 }}
                   type="number" min="1" max="31" required
                   value={form.dia_fechamento}
                   onChange={(e) => setForm({ ...form, dia_fechamento: e.target.value })}
                 />
               </label>
-              <label style={estilos.campo}>
-                Dia de vencimento
+              <label className="field field-sm">
+                Vencimento (dia)
                 <input
-                  style={{ ...estilos.input, width: 120 }}
                   type="number" min="1" max="31" required
                   value={form.dia_vencimento}
                   onChange={(e) => setForm({ ...form, dia_vencimento: e.target.value })}
                 />
               </label>
-              <label style={estilos.campo}>
+              <label className="field" style={{ width: 150 }}>
                 Limite (R$)
                 <input
-                  style={{ ...estilos.input, width: 140 }}
                   type="number" min="0" step="0.01" required
                   value={form.limite}
                   onChange={(e) => setForm({ ...form, limite: e.target.value })}
@@ -179,55 +157,61 @@ export default function FontesDestinos() {
             </>
           )}
 
-          <button type="submit" style={estilos.botao}>{editandoId ? 'Salvar' : 'Adicionar'}</button>
+          <button type="submit" className="btn">{editandoId ? 'Salvar alterações' : '+ Adicionar'}</button>
           {editandoId && (
-            <button type="button" style={estilos.botaoSec} onClick={limparForm}>Cancelar</button>
+            <button type="button" className="btn btn-secondary" onClick={limparForm}>Cancelar</button>
           )}
         </div>
       </form>
 
-      <label style={{ ...estilos.campo, marginBottom: '1rem', maxWidth: 220 }}>
-        Filtrar por tipo
-        <select style={estilos.input} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
-          <option value="">Todos</option>
-          <option value="conta">Conta</option>
-          <option value="renda">Renda</option>
-          <option value="cartao_credito">Cartão de crédito</option>
-        </select>
-      </label>
+      <div className="form-row" style={{ marginBottom: '1rem' }}>
+        <label className="field">
+          Filtrar por tipo
+          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="conta">Conta</option>
+            <option value="renda">Renda</option>
+            <option value="cartao_credito">Cartão de crédito</option>
+          </select>
+        </label>
+      </div>
 
       {carregando ? (
-        <p>Carregando...</p>
+        <p className="empty">Carregando...</p>
       ) : itens.length === 0 ? (
-        <p>Nenhuma fonte ou destino encontrado.</p>
+        <div className="card empty">Nenhuma fonte ou destino encontrado.</div>
       ) : (
-        <table style={estilos.tabela}>
-          <thead>
-            <tr>
-              <th style={estilos.th}>Nome</th>
-              <th style={estilos.th}>Tipo</th>
-              <th style={estilos.th}>Fechamento</th>
-              <th style={estilos.th}>Vencimento</th>
-              <th style={estilos.th}>Limite</th>
-              <th style={estilos.th}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {itens.map((item) => (
-              <tr key={item.id}>
-                <td style={estilos.td}>{item.nome}</td>
-                <td style={estilos.td}>{NOMES_TIPO[item.tipo]}</td>
-                <td style={estilos.td}>{item.dia_fechamento ? `dia ${item.dia_fechamento}` : '—'}</td>
-                <td style={estilos.td}>{item.dia_vencimento ? `dia ${item.dia_vencimento}` : '—'}</td>
-                <td style={estilos.td}>{item.limite !== null && item.limite !== undefined ? moeda(item.limite) : '—'}</td>
-                <td style={estilos.td}>
-                  <button style={estilos.botaoPeq} onClick={() => editar(item)}>Editar</button>
-                  <button style={estilos.botaoPerigo} onClick={() => excluir(item)}>Excluir</button>
-                </td>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Fechamento</th>
+                <th>Vencimento</th>
+                <th className="num">Limite</th>
+                <th className="num">Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {itens.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.nome}</td>
+                  <td><span className={`badge ${CLASSE_TIPO[item.tipo]}`}>{NOMES_TIPO[item.tipo]}</span></td>
+                  <td>{item.dia_fechamento ? `dia ${item.dia_fechamento}` : '—'}</td>
+                  <td>{item.dia_vencimento ? `dia ${item.dia_vencimento}` : '—'}</td>
+                  <td className="num">{item.limite !== null && item.limite !== undefined ? moeda(item.limite) : '—'}</td>
+                  <td>
+                    <div className="actions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => editar(item)}>Editar</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => excluir(item)}>Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

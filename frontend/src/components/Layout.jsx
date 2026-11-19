@@ -1,8 +1,17 @@
-import { Link, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+const MENU = [
+  { to: '/dashboard', icone: '📊', texto: 'Dashboard' },
+  { to: '/lancamentos', icone: '🧾', texto: 'Lançamentos' },
+  { to: '/categorias', icone: '🏷️', texto: 'Categorias' },
+  { to: '/fontes-destinos', icone: '🏦', texto: 'Fontes e Destinos' },
+  { to: '/relatorios', icone: '📈', texto: 'Relatórios' },
+  { to: '/faturas', icone: '💳', texto: 'Faturas' }
+];
+
 export default function Layout() {
-  const { logado, carregando, logout } = useAuth();
+  const { logado, carregando, logout, usuario } = useAuth();
 
   // Impede que a tela pisque no /login antes do useEffect carregar o localStorage
   if (carregando) {
@@ -14,32 +23,42 @@ export default function Layout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Menu lateral
+  const inicial = usuario?.nome?.trim()?.[0]?.toUpperCase() || '?';
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <nav style={{ width: '220px', padding: '1rem', backgroundColor: '#f4f4f5', borderRight: '1px solid #ddd' }}>
-        <h2>Finanças</h2>
-        <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '2rem' }}>
-          <li><Link to="/dashboard" style={{ textDecoration: 'none', color: '#333' }}>Dashboard</Link></li>
-          <li><Link to="/lancamentos" style={{ textDecoration: 'none', color: '#333' }}>Lançamentos</Link></li>
-          <li><Link to="/categorias" style={{ textDecoration: 'none', color: '#333' }}>Categorias</Link></li>
-          <li><Link to="/fontes-destinos" style={{ textDecoration: 'none', color: '#333' }}>Fontes e Destinos</Link></li>
-          <li><Link to="/relatorios" style={{ textDecoration: 'none', color: '#333' }}>Relatórios</Link></li>
-          <li><Link to="/faturas" style={{ textDecoration: 'none', color: '#333' }}>Faturas</Link></li>
-          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #ccc' }} />
-          {/* Botão de Logout conectado ao Contexto */}
-          <li>
-            <button 
-              onClick={logout} 
-              style={{ background: 'none', border: 'none', color: '#d32f2f', cursor: 'pointer', padding: 0, fontSize: '1rem' }}
+    <div className="layout">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-logo">💰</span>
+          <span>Finanças</span>
+        </div>
+
+        <nav className="nav">
+          {MENU.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              Sair
-            </button>
-          </li>
-        </ul>
-      </nav>
-      <main style={{ flex: 1, padding: '2rem', backgroundColor: '#ffffff' }}>
-        <Outlet /> 
+              <span>{item.icone}</span>
+              <span>{item.texto}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <span className="user-avatar">{inicial}</span>
+            <span className="user-name">{usuario?.nome}</span>
+          </div>
+          <button className="btn-logout" onClick={logout}>Sair</button>
+        </div>
+      </aside>
+
+      <main className="content">
+        <div className="content-inner">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

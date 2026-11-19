@@ -2,22 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
-const estilos = {
-  pagina: { textAlign: 'left', color: '#222' },
-  titulo: { color: '#222', fontSize: '2rem', margin: '0 0 0.5rem' },
-  sub: { color: '#555', margin: '0 0 1.5rem' },
-  resumo: { display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' },
-  card: { border: '1px solid #ddd', borderRadius: 8, padding: '1rem 1.25rem', minWidth: 180, background: '#fafafa' },
-  valor: { fontSize: '1.5rem', fontWeight: 600 },
-  subtitulo: { color: '#222', fontSize: '1.2rem', margin: '0 0 0.75rem' },
-  tabela: { width: '100%', maxWidth: 520, borderCollapse: 'collapse' },
-  th: { textAlign: 'left', padding: '8px', borderBottom: '2px solid #ddd', color: '#222' },
-  thNum: { textAlign: 'right', padding: '8px', borderBottom: '2px solid #ddd', color: '#222' },
-  td: { padding: '8px', borderBottom: '1px solid #eee', color: '#222' },
-  tdNum: { padding: '8px', borderBottom: '1px solid #eee', color: '#222', textAlign: 'right' },
-  erro: { background: '#fdecea', color: '#b71c1c', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem' }
-};
-
 function moeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -64,52 +48,63 @@ export default function Dashboard() {
     : [];
 
   return (
-    <div style={estilos.pagina}>
-      <h1 style={estilos.titulo}>Olá, {usuario?.nome?.split(' ')[0] || 'usuário'}!</h1>
-      <p style={estilos.sub}>Resumo de {periodo.nome}</p>
+    <div className="page">
+      <div className="page-header">
+        <h1>Olá, {usuario?.nome?.split(' ')[0] || 'usuário'}! 👋</h1>
+        <p className="page-subtitle">Resumo de {periodo.nome}</p>
+      </div>
 
-      {erro && <div style={estilos.erro}>{erro}</div>}
-      {carregando && <p>Carregando...</p>}
+      {erro && <div className="alert alert-error">{erro}</div>}
+      {carregando && <p className="empty">Carregando...</p>}
 
       {relatorio && (
         <>
-          <div style={estilos.resumo}>
-            <div style={estilos.card}>
-              Entradas
-              <div style={{ ...estilos.valor, color: '#1b5e20' }}>{moeda(relatorio.total_entradas)}</div>
+          <div className="stats">
+            <div className="stat stat-entrada">
+              <div className="stat-label">Entradas</div>
+              <div className="stat-value">{moeda(relatorio.total_entradas)}</div>
             </div>
-            <div style={estilos.card}>
-              Saídas
-              <div style={{ ...estilos.valor, color: '#b71c1c' }}>{moeda(relatorio.total_saidas)}</div>
+            <div className="stat stat-saida">
+              <div className="stat-label">Saídas</div>
+              <div className="stat-value">{moeda(relatorio.total_saidas)}</div>
             </div>
-            <div style={estilos.card}>
-              Saldo
-              <div style={{ ...estilos.valor, color: relatorio.saldo < 0 ? '#b71c1c' : '#222' }}>{moeda(relatorio.saldo)}</div>
+            <div className="stat">
+              <div className="stat-label">Saldo do mês</div>
+              <div className="stat-value" style={{ color: relatorio.saldo < 0 ? '#b91c1c' : undefined }}>
+                {moeda(relatorio.saldo)}
+              </div>
             </div>
           </div>
 
-          <h2 style={estilos.subtitulo}>Maiores gastos do mês</h2>
+          <h2>Maiores gastos do mês</h2>
           {topSaidas.length === 0 ? (
-            <p>Nenhuma saída registrada neste mês.</p>
+            <div className="card empty">Nenhuma saída registrada neste mês.</div>
           ) : (
-            <table style={estilos.tabela}>
-              <thead>
-                <tr>
-                  <th style={estilos.th}>Categoria</th>
-                  <th style={estilos.thNum}>Total</th>
-                  <th style={estilos.thNum}>% das saídas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topSaidas.map((c) => (
-                  <tr key={c.categoria_id}>
-                    <td style={estilos.td}>{c.nome}</td>
-                    <td style={estilos.tdNum}>{moeda(c.total)}</td>
-                    <td style={estilos.tdNum}>{c.percentual.toFixed(2)}%</td>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th className="num">Total</th>
+                    <th className="num">% das saídas</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {topSaidas.map((c) => (
+                    <tr key={c.categoria_id}>
+                      <td>{c.nome}</td>
+                      <td className="num">{moeda(c.total)}</td>
+                      <td>
+                        <div className="pct">
+                          <div className="bar-track"><div className="bar-fill saida" style={{ width: `${c.percentual}%` }} /></div>
+                          <span className="pct-text">{c.percentual.toFixed(2)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

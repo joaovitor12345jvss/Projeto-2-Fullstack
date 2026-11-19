@@ -3,8 +3,11 @@ import RelatorioFontesDestinos from '../relatorios/RelatorioFontesDestinos';
 
 export default function Relatorios() {
   return (
-    <div style={{ textAlign: 'left', color: '#222' }}>
-      <h1 style={{ color: '#222', fontSize: '2rem', margin: '0 0 1.5rem' }}>Relatórios</h1>
+    <div className="page">
+      <div className="page-header">
+        <h1>Relatórios</h1>
+        <p className="page-subtitle">Veja para onde o seu dinheiro está indo.</p>
+      </div>
       <RelatorioCategorias />
       <RelatorioFontesDestinos />
     </div>

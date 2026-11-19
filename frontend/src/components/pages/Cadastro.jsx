@@ -2,18 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const estilos = {
-  fundo: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f4f5', padding: '1rem', boxSizing: 'border-box' },
-  card: { width: '100%', maxWidth: 420, background: '#fff', border: '1px solid #ddd', borderRadius: 8, padding: '2rem', textAlign: 'left', color: '#222', boxSizing: 'border-box' },
-  titulo: { color: '#222', fontSize: '1.8rem', margin: '0 0 1.5rem', textAlign: 'center' },
-  campo: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.9rem', marginBottom: '1rem' },
-  input: { padding: '10px', border: '1px solid #bbb', borderRadius: 4, background: '#fff', color: '#222', fontSize: '1rem' },
-  botao: { width: '100%', padding: '10px', border: 'none', borderRadius: 4, background: '#2563eb', color: '#fff', cursor: 'pointer', fontSize: '1rem' },
-  erro: { background: '#fdecea', color: '#b71c1c', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem', fontSize: '0.9rem' },
-  erroCampo: { color: '#b71c1c', fontSize: '0.8rem' },
-  ok: { background: '#e8f5e9', color: '#1b5e20', padding: '8px 12px', borderRadius: 4, marginBottom: '1rem', fontSize: '0.9rem' },
-  rodape: { marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#444' }
-};
+// Aplica a máscara 000.000.000-00 enquanto o usuário digita
+function formatarCpf(valor) {
+  const n = valor.replace(/\D/g, '').slice(0, 11);
+  if (n.length <= 3) return n;
+  if (n.length <= 6) return `${n.slice(0, 3)}.${n.slice(3)}`;
+  if (n.length <= 9) return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6)}`;
+  return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`;
+}
 
 export default function Cadastro() {
   const { cadastrar } = useAuth();
@@ -62,46 +58,61 @@ export default function Cadastro() {
   }
 
   return (
-    <div style={estilos.fundo}>
-      <form onSubmit={enviar} style={estilos.card}>
-        <h1 style={estilos.titulo}>Criar conta</h1>
+    <div className="auth-page">
+      <div className="auth-side">
+        <h1>💰 Finanças</h1>
+        <p>Crie sua conta e comece a organizar o seu dinheiro hoje mesmo.</p>
+        <ul>
+          <li>✓ Categorias e fontes já criadas para você</li>
+          <li>✓ Seus dados ficam só na sua conta</li>
+        </ul>
+      </div>
 
-        {erro && <div style={estilos.erro}>{erro}</div>}
-        {sucesso && <div style={estilos.ok}>Cadastro realizado! Redirecionando para o login...</div>}
+      <div className="auth-main">
+        <form onSubmit={enviar} className="card auth-card">
+          <h2>Criar conta</h2>
+          <p className="page-subtitle">Preencha os dados abaixo.</p>
 
-        <label style={estilos.campo}>
-          Nome
-          <input style={estilos.input} required value={form.nome} onChange={(e) => atualizar('nome', e.target.value)} />
-        </label>
-        <label style={estilos.campo}>
-          E-mail
-          <input style={estilos.input} type="email" required value={form.email} onChange={(e) => atualizar('email', e.target.value)} />
-          {errosCampos.email && <span style={estilos.erroCampo}>{errosCampos.email}</span>}
-        </label>
-        <label style={estilos.campo}>
-          CPF
-          <input style={estilos.input} required placeholder="000.000.000-00" value={form.cpf} onChange={(e) => atualizar('cpf', e.target.value)} />
-          {errosCampos.cpf && <span style={estilos.erroCampo}>{errosCampos.cpf}</span>}
-        </label>
-        <label style={estilos.campo}>
-          Senha
-          <input style={estilos.input} type="password" required value={form.senha} onChange={(e) => atualizar('senha', e.target.value)} />
-          {errosCampos.senha && <span style={estilos.erroCampo}>{errosCampos.senha}</span>}
-        </label>
-        <label style={estilos.campo}>
-          Confirmar senha
-          <input style={estilos.input} type="password" required value={form.confirmar} onChange={(e) => atualizar('confirmar', e.target.value)} />
-          {errosCampos.confirmar && <span style={estilos.erroCampo}>{errosCampos.confirmar}</span>}
-        </label>
+          {erro && <div className="alert alert-error">{erro}</div>}
+          {sucesso && <div className="alert alert-success">Cadastro realizado! Redirecionando para o login...</div>}
 
-        <button type="submit" style={estilos.botao} disabled={enviando || sucesso}>
-          {enviando ? 'Cadastrando...' : 'Cadastrar'}
-        </button>
+          <label className="field">
+            Nome
+            <input required value={form.nome} onChange={(e) => atualizar('nome', e.target.value)} />
+          </label>
+          <label className="field">
+            E-mail
+            <input type="email" required value={form.email} onChange={(e) => atualizar('email', e.target.value)} />
+            {errosCampos.email && <span className="field-error">{errosCampos.email}</span>}
+          </label>
+          <label className="field">
+            CPF
+            <input
+              required inputMode="numeric" maxLength={14} placeholder="000.000.000-00"
+              value={form.cpf} onChange={(e) => atualizar('cpf', formatarCpf(e.target.value))}
+            />
+            {errosCampos.cpf && <span className="field-error">{errosCampos.cpf}</span>}
+          </label>
+          <label className="field">
+            Senha
+            <input type="password" required value={form.senha} onChange={(e) => atualizar('senha', e.target.value)} />
+            {errosCampos.senha && <span className="field-error">{errosCampos.senha}</span>}
+          </label>
+          <label className="field">
+            Confirmar senha
+            <input type="password" required value={form.confirmar} onChange={(e) => atualizar('confirmar', e.target.value)} />
+            {errosCampos.confirmar && <span className="field-error">{errosCampos.confirmar}</span>}
+          </label>
 
-        <p style={estilos.rodape}>
-          Já tem conta? <Link to="/login">Entrar</Link>
-        </p>
-      </form>
+          <button type="submit" className="btn btn-block" disabled={enviando || sucesso}>
+            {enviando ? 'Cadastrando...' : 'Cadastrar'}
+          </button>
+
+          <p className="auth-footer">
+            Já tem conta? <Link to="/login">Entrar</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
