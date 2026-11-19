@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../config/database.js';
 import { randomUUID } from 'node:crypto';
+import { cicloDaCompra, datasDoCiclo, dataLocalISO } from '../models/Fatura.js';
 
 const router = Router();
 const TIPOS = ['entrada', 'saida'];
@@ -35,11 +36,60 @@ async function validarRelacionamentos(client, usuarioId, tipo, categoriaId, font
   if (categoria.rows[0].tipo !== tipo) return { status: 400, erro: 'A categoria não corresponde ao tipo do lançamento.' };
 
   const fonte = await client.query(
-    'SELECT id, tipo FROM fontes_destinos WHERE id = $1 AND usuario_id = $2',
+    'SELECT id, nome, tipo, dia_fechamento, dia_vencimento, limite FROM fontes_destinos WHERE id = $1 AND usuario_id = $2',
     [fonteDestinoId, usuarioId]
   );
   if (!fonte.rowCount) return { status: 404, erro: 'Fonte/destino não encontrada ou não pertence ao usuário.' };
   return { fonte: fonte.rows[0] };
+}
+
+const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Limite já comprometido no cartão: soma das compras e parcelas cuja fatura ainda não venceu
+// (mesma regra do "limite utilizado" da previsão de faturas, RF9).
+async function limiteUtilizado(client, usuarioId, cartao, ignorarId = null) {
+  const hoje = dataLocalISO();
+  const result = await client.query(
+    `SELECT id, valor, to_char(data, 'YYYY-MM-DD') AS data
+     FROM lancamentos
+     WHERE usuario_id = $1 AND fonte_destino_id = $2 AND tipo = 'saida'`,
+    [usuarioId, cartao.id]
+  );
+  let total = 0;
+  for (const l of result.rows) {
+    if (ignorarId !== null && l.id === ignorarId) continue;
+    const ciclo = cicloDaCompra(l.data, cartao.dia_fechamento);
+    if (datasDoCiclo(ciclo, cartao).vencimento >= hoje) total += Number(l.valor);
+  }
+  return Number(total.toFixed(2));
+}
+
+// Valor das novas parcelas que passam a ocupar o limite (as que ainda não venceram).
+function valorNovoNoLimite(cartao, valorTotal, parcelas, data) {
+  const hoje = dataLocalISO();
+  const totalCentavos = Math.round(valorTotal * 100);
+  const baseCentavos = Math.floor(totalCentavos / parcelas);
+  const resto = totalCentavos % parcelas;
+  let novo = 0;
+  for (let i = 1; i <= parcelas; i++) {
+    const valorParcela = (baseCentavos + (i === 1 ? resto : 0)) / 100;
+    const ciclo = cicloDaCompra(adicionarMeses(data, i - 1), cartao.dia_fechamento);
+    if (datasDoCiclo(ciclo, cartao).vencimento >= hoje) novo += valorParcela;
+  }
+  return Number(novo.toFixed(2));
+}
+
+// Devolve a mensagem de erro se a compra ultrapassar o limite do cartão; senão, null.
+async function verificarLimite(client, usuarioId, cartao, valorTotal, parcelas, data, ignorarId = null) {
+  const novo = valorNovoNoLimite(cartao, valorTotal, parcelas, data);
+  if (novo <= 0) return null;
+  const utilizado = await limiteUtilizado(client, usuarioId, cartao, ignorarId);
+  const limite = Number(cartao.limite);
+  if (utilizado + novo > limite + 0.001) {
+    const disponivel = Math.max(0, limite - utilizado);
+    return `Limite insuficiente no cartão "${cartao.nome}". Disponível: ${dinheiro(disponivel)}; compra: ${dinheiro(novo)}.`;
+  }
+  return null;
 }
 
 // RF6 — Criar lançamento. Compras parceladas no cartão geram um registro por parcela.
@@ -65,6 +115,11 @@ router.post('/', async (req, res, next) => {
 
     if (parcelas > 1 && (tipo !== 'saida' || validacao.fonte.tipo !== 'cartao_credito')) {
       return res.status(400).json({ erro: 'Parcelamento só é permitido para despesas em cartão de crédito.' });
+    }
+
+    if (tipo === 'saida' && validacao.fonte.tipo === 'cartao_credito') {
+      const erroLimite = await verificarLimite(client, usuarioId, validacao.fonte, valorNumerico, parcelas, data);
+      if (erroLimite) return res.status(409).json({ erro: erroLimite });
     }
 
     await client.query('BEGIN');
@@ -214,6 +269,10 @@ router.put('/:id', async (req, res, next) => {
     if (validacao.erro) return res.status(validacao.status).json({ erro: validacao.erro });
     if (validacao.fonte.tipo === 'cartao_credito' && tipo !== 'saida') {
       return res.status(400).json({ erro: 'Cartão de crédito só pode ser usado em despesas.' });
+    }
+    if (tipo === 'saida' && validacao.fonte.tipo === 'cartao_credito') {
+      const erroLimite = await verificarLimite(client, req.usuarioId, validacao.fonte, valorNumerico, 1, data, id);
+      if (erroLimite) return res.status(409).json({ erro: erroLimite });
     }
     const result = await client.query(
       `UPDATE lancamentos
